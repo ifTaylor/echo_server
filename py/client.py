@@ -11,15 +11,16 @@ async def send_data(reader):
             print(f"Received from server: {message}")
 
 async def send_messages(writer, username):
-    while True:
-        message = await asyncio.get_event_loop().run_in_executor(None, input, "Enter message to send (or 'exit' to quit): ")
-        if message.lower() == 'exit':
-            break
+    try:
+        while True:
+            message = await asyncio.get_event_loop().run_in_executor(None, input, "Enter message to send (or 'exit' to quit): ")
+            if message.lower() == 'exit':
+                break
 
-        writer.write(f"{username}: {message}".encode())
-        await writer.drain()
-
-    writer.close()
+            writer.write(f"{username}: {message}\n".encode())
+            await writer.drain()
+    finally:
+        writer.close()
 
 async def main():
     server_address = 'localhost'
@@ -29,7 +30,11 @@ async def main():
 
     reader, writer = await asyncio.open_connection(server_address, server_port)
 
-    await asyncio.gather(send_data(reader), send_messages(writer, username))
+    try:
+        await asyncio.gather(send_data(reader), send_messages(writer, username))
+    finally:
+        writer.close()
+        await writer.wait_closed()
 
 if __name__ == "__main__":
     asyncio.run(main())
